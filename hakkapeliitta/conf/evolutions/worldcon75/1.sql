@@ -1,3 +1,5 @@
+# --- !Ups
+
 CREATE TYPE membershipStatus AS ENUM ('NonMember','Supporter','KidInTow','Child','Youth','FirstWorldcon','Adult');
 
 CREATE TABLE People (
@@ -49,5 +51,9 @@ CREATE TABLE Transactions (
     description text NOT NULL
 );
 
-
-
+# --- !Down
+DROP TABLE PaperPublications;
+DROP TABLE Admins;
+DROP TABLE Transactions;
+DROP TABLE People;
+DROP TYPE membershipStatus;

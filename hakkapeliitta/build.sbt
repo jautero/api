@@ -11,13 +11,14 @@ scalaVersion := "2.11.7"
 resolvers += Resolver.jcenterRepo
 
 libraryDependencies ++= Seq(
-  cache,
-  "com.mohiva" %% "play-silhouette" % "3.0.2",
-  "com.kyleu" %% "jdub-async" % "1.0",
-  "org.webjars" % "bootstrap" % "3.3.5",
-  "com.stripe" % "stripe-java" % "1.42.0",
-  "com.sendgrid" % "sendgrid-java" % "2.2.1"
+  cache
+  , "com.stripe" % "stripe-java" % "1.42.0"
+  , "com.sendgrid" % "sendgrid-java" % "2.2.1"
+  , "com.typesafe.play" %% "play-slick" % "2.0.0"
+  , "com.typesafe.play" %% "play-slick-evolutions" % "2.0.0"
+  , "org.postgresql" % "postgresql" % "9.4.1208"
 )
+
 
 routesGenerator := InjectedRoutesGenerator
 

@@ -1,36 +1,27 @@
 package controllers
 
-import java.nio.file.{Paths, Files}
-import java.time.Instant
 import java.nio.charset.StandardCharsets
-import java.time.LocalDateTime
+import java.nio.file.{Files, Paths}
+import java.time.Instant
 import java.util.HashMap
+import javax.inject._
 
-import com.google.common.reflect.TypeToken
-import com.google.gson.internal.LinkedTreeMap
 import com.sendgrid.SendGrid
 import com.stripe.Stripe
 import com.stripe.exception._
 import com.stripe.model.Charge
-import com.stripe.model.StripeObject
 import com.stripe.net.APIResource
-import play.api.Play
 import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{Headers, Action}
-import play.api.mvc.Results._
-import play.api.Play.current
+import play.api.mvc.{Action, Controller, Headers}
+import play.api.{Configuration, Logger}
 
-import scala.concurrent.Future
-import scala.util.parsing.json.JSONObject
-import play.api.Logger
-
-import scala.util.{Try,Success, Failure}
-import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.Future
+import scala.util.{Failure, Success, Try}
 
-class StripeController {
+class StripeController @Inject() (configuration: Configuration) extends Controller {
   val log = Logger(this.getClass())
-  val sendgrid = new SendGrid(Play.application.configuration.getString("sendgrid.apiKey").get)
+  val sendgrid = new SendGrid(configuration.getString("sendgrid.apiKey").get)
 
   def notJsonResult= {
     val errorStr = "Invalid, request not made in JSON"
@@ -142,7 +133,7 @@ http://worldcon.fi/"""
   def orderMembership = Action { request =>
     request.body.asJson.map { requestJson =>
       (for {
-        apiKey <- Play.application.configuration.getString("stripe.apiKey")
+        apiKey <- configuration.getString("stripe.apiKey")
         tokenId <- (requestJson \ "token" \ "id").asOpt[String]
         email <-  (requestJson \ "token" \ "email").asOpt[String]
         amount <- (requestJson \ "purchase" \ "amount").asOpt[BigDecimal]
@@ -233,4 +224,5 @@ http://worldcon.fi/"""
       Future.successful(notJsonResult)
     }
   }
+
 }

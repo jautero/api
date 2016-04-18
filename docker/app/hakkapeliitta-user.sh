@@ -14,4 +14,5 @@ echo "Starting hakkapeliitta"
     -Ddb.password=$POSTGRES_PASSWORD\
     -Dstripe.apiKey=$STRIPE_SECRET_APIKEY\
     -Dsendgrid.apiKey=$SENDGRID_APIKEY\
+    -Dplay.crypto.secret=$PLAY_SECRET\
     -Dplay.http.forwarded.trustedProxies=proxy
