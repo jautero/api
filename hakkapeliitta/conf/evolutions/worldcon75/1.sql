@@ -1,17 +1,16 @@
-# --- !Ups
-
-CREATE TYPE membershipStatus AS ENUM ('NonMember','Supporter','KidInTow','Child','Youth','FirstWorldcon','Adult');
+CREATE TYPE MembershipStatus AS ENUM ('NonMember','Supporter','KidInTow','Child','Youth','FirstWorldcon','Adult');
 
 CREATE TABLE People (
     id integer PRIMARY KEY,
     member_number integer NOT NULL,
-    legal_name text NOT NULL,
+    first_name text NOT NULL,
+    last_name text NOT NULL,
     badge_name text,
     email text,
     city text,
     state text,
     country text,
-    delegated_member_number integer,
+    controller_id integer,
     membership MembershipStatus NOT NULL,
     can_hugo_nominate bool NOT NULL DEFAULT false,
     can_hugo_vote bool NOT NULL DEFAULT false,
@@ -39,21 +38,14 @@ CREATE TABLE Transactions (
     target_people_id integer REFERENCES People NOT NULL,
     author_people_id integer REFERENCES People NOT NULL,
     "timestamp" timestamptz NOT NULL,
-    source text NOT NULL,
-    sum money NOT NULL,
-    currency char(3) NOT NULL DEFAULT 'EUR',
-    membership MembershipStatus NOT NULL,
-    can_hugo_nominate bool NOT NULL DEFAULT false,
-    can_hugo_vote bool NOT NULL DEFAULT false,
-    can_site_select bool NOT NULL DEFAULT false,
+    author_source text NOT NULL,
+    sum money,
+    currency char(3),
+    membership MembershipStatus,
+    can_hugo_nominate bool,
+    can_hugo_vote bool,
+    can_site_select bool,
     action text NOT NULL,
     parameters jsonb NOT NULL,
     description text NOT NULL
 );
-
-# --- !Down
-DROP TABLE PaperPublications;
-DROP TABLE Admins;
-DROP TABLE Transactions;
-DROP TABLE People;
-DROP TYPE membershipStatus;

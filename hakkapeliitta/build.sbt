@@ -17,7 +17,10 @@ libraryDependencies ++= Seq(
   , "com.typesafe.play" %% "play-slick" % "2.0.0"
   , "com.typesafe.play" %% "play-slick-evolutions" % "2.0.0"
   , "org.postgresql" % "postgresql" % "9.4.1208"
-)
+  , "com.typesafe.slick" %% "slick-codegen" % "3.1.1" % "compile"
+  , "com.github.tminglei" %% "slick-pg" % "0.13.0"
+  , "com.github.tminglei" %% "slick-pg_play-json" % "0.13.0"
+  )
 
 
 routesGenerator := InjectedRoutesGenerator
