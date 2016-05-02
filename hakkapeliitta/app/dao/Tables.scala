@@ -1,4 +1,7 @@
 package dao
+
+import play.api.libs.json.JsValue
+
 // AUTO-GENERATED Slick data model
 /** Stand-alone Slick data model for immediate use */
 object Tables extends {
@@ -19,6 +22,7 @@ trait Tables {
   def ddl = schema
 
   /** Entity class storing rows of table Admins
+ *
    *  @param id Database column id SqlType(int4), PrimaryKey
    *  @param peopleId Database column people_id SqlType(int4)
    *  @param superAdmin Database column super_admin SqlType(bool), Default(false)
@@ -54,6 +58,7 @@ trait Tables {
   lazy val Admins = new TableQuery(tag => new Admins(tag))
 
   /** Entity class storing rows of table Paperpublications
+ *
    *  @param id Database column id SqlType(int4), PrimaryKey
    *  @param peopleId Database column people_id SqlType(int4), Default(None)
    *  @param name Database column name SqlType(text), Default(None)
@@ -89,6 +94,7 @@ trait Tables {
   lazy val Paperpublications = new TableQuery(tag => new Paperpublications(tag))
 
   /** Entity class storing rows of table People
+ *
    *  @param id Database column id SqlType(int4), PrimaryKey
    *  @param memberNumber Database column member_number SqlType(int4)
    *  @param firstName Database column first_name SqlType(text)
@@ -148,6 +154,7 @@ trait Tables {
   lazy val People = new TableQuery(tag => new People(tag))
 
   /** Entity class storing rows of table Transactions
+ *
    *  @param id Database column id SqlType(int4), PrimaryKey
    *  @param targetPeopleId Database column target_people_id SqlType(int4)
    *  @param authorPeopleId Database column author_people_id SqlType(int4)
@@ -199,7 +206,7 @@ trait Tables {
     /** Database column action SqlType(text) */
     val action: Rep[String] = column[String]("action")
     /** Database column parameters SqlType(jsonb), Length(2147483647,false) */
-    val parameters: Rep[String] = column[String]("parameters", O.Length(2147483647,varying=false))
+    val parameters: Rep[JsValue] = column[JsValue]("parameters")
     /** Database column description SqlType(text) */
     val description: Rep[String] = column[String]("description")
 
