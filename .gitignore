@@ -2,6 +2,7 @@
 
 # app specific
 .env*
+postgres-standalone/.env
 fixtures/postgres/*
 fixtures/redis/*
 fixtures/ssl/*
