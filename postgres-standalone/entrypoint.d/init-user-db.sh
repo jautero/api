@@ -15,15 +15,16 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
 
     CREATE TABLE IF NOT EXISTS People (
         id SERIAL PRIMARY KEY,
-        member_number integer NOT NULL,
-        first_name text NOT NULL,
-        last_name text NOT NULL,
-        badge_name text,
+        controller_id integer REFERENCES People,
+        member_number integer,
+        legal_name text NOT NULL,
+        public_first_name text,
+        public_last_name text,
         email text,
         city text,
         state text,
         country text,
-        controller_id integer,
+        badge_text text,
         membership MembershipStatus NOT NULL,
         can_hugo_nominate bool NOT NULL DEFAULT false,
         can_hugo_vote bool NOT NULL DEFAULT false,
@@ -32,7 +33,7 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
 
     CREATE TABLE IF NOT EXISTS PaperPublications (
         id SERIAL PRIMARY KEY,
-        people_id integer REFERENCES People(id),
+        people_id integer REFERENCES People NOT NULL,
         name text,
         address text,
         country text
@@ -48,10 +49,10 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
 
     CREATE TABLE IF NOT EXISTS Transactions (
         id SERIAL PRIMARY KEY,
-        target_people_id integer REFERENCES People NOT NULL,
-        author_people_id integer REFERENCES People NOT NULL,
         "timestamp" timestamptz NOT NULL,
-        author_source text NOT NULL,
+        client_info text NOT NULL,
+        author_id integer REFERENCES People NOT NULL,
+        target_id integer REFERENCES People NOT NULL,
         sum money,
         currency char(3),
         membership MembershipStatus,
