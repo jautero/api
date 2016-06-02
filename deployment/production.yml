@@ -1,5 +1,7 @@
 version: '2'
 
+# Dev setup
+
 services:
   postgres:
     image: postgres:9.5
