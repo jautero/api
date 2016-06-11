@@ -9,7 +9,7 @@ CREATE TYPE MembershipStatus AS ENUM ('NonMember','Supporter','KidInTow','Child'
 
 CREATE TABLE IF NOT EXISTS People (
     id SERIAL PRIMARY KEY,
-    controller_id integer REFERENCES People,
+    last_modified timestamptz DEFAULT now(),
     member_number integer,
     legal_name text NOT NULL,
     public_first_name text,
@@ -25,41 +25,62 @@ CREATE TABLE IF NOT EXISTS People (
     can_site_select bool NOT NULL DEFAULT false
 );
 
-CREATE TABLE IF NOT EXISTS PaperPublications (
+CREATE TABLE IF NOT EXISTS PaperPubs (
     id SERIAL PRIMARY KEY,
     people_id integer REFERENCES People NOT NULL,
-    name text,
-    address text,
-    country text
+    name text NOT NULL,
+    address text NOT NULL,
+    country text NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS Admins (
-    id SERIAL PRIMARY KEY,
-    people_id integer REFERENCES People NOT NULL,
-    super_admin bool NOT NULL DEFAULT false,
+    email text PRIMARY KEY,
     member_admin bool NOT NULL DEFAULT false,
-    hugo_admin bool NOT NULL DEFAULT false
+    admin_admin bool NOT NULL DEFAULT false
 );
 
 CREATE TABLE IF NOT EXISTS Keys (
-    id SERIAL PRIMARY KEY,
-    people_id integer REFERENCES People NOT NULL,
+    email text PRIMARY KEY,
     key text NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS Transactions (
+CREATE TABLE IF NOT EXISTS Log (
     id SERIAL PRIMARY KEY,
-    "timestamp" timestamptz NOT NULL,
-    client_info text NOT NULL,
-    author_id integer REFERENCES People NOT NULL,
-    target_id integer REFERENCES People NOT NULL,
-    sum money,
-    currency char(3),
-    membership MembershipStatus,
-    can_hugo_nominate bool,
-    can_hugo_vote bool,
-    can_site_select bool,
+    "timestamp" timestamptz NOT NULL DEFAULT now(),
+    client_ip text NOT NULL,
+    client_ua text,
+    author text,
+    subject integer REFERENCES People,
     action text NOT NULL,
     parameters jsonb NOT NULL,
     description text NOT NULL
 );
+
+
+-- keep People.last_modified up to date
+CREATE FUNCTION set_last_modified() RETURNS trigger AS $$
+BEGIN
+    IF row(NEW.*) IS DISTINCT FROM row(OLD.*) THEN
+        NEW.last_modified = now();
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER set_last_modified_people
+    BEFORE UPDATE ON People
+    FOR EACH ROW
+    EXECUTE PROCEDURE set_last_modified();
+
+
+-- from node_modules/connect-pg-simple/table.sql
+CREATE TABLE "session" (
+    "sid" varchar NOT NULL COLLATE "default",
+    "sess" json NOT NULL,
+    "expire" timestamp(6) NOT NULL
+) WITH (OIDS=FALSE);
+
+ALTER TABLE "session"
+    ADD CONSTRAINT "session_pkey"
+    PRIMARY KEY ("sid")
+    NOT DEFERRABLE INITIALLY IMMEDIATE;
