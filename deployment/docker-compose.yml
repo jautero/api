@@ -4,8 +4,9 @@ version: '2'
 
 services:
   postgres:
-    image: postgres:9.5
-    env_file: .env
+    build: ../postgres-standalone
+    image: arsatiki/postgres
+#    env_file: .env
     ports:
       - "5432:5432"
     restart: always
@@ -15,5 +16,23 @@ services:
     environment:
      - PGDATA=/var/lib/postgresql/data/pgdata
   
-#  app:
-  
+  app:
+    build: ../db-api
+    image: arsatiki/worldcon-db-api
+    links:
+      - postgres
+    ports:
+      - "3000:3000"
+    
+#  proxy:
+#    build: ../proxy/
+#    image: arsatiki/worldcon-api-proxy
+#    ports:
+#      - "80:80"
+#      - "443:443"
+#    links:
+#     - app
+#    volumes:
+#     - /etc/letsencrypt:/etc/letsencrypt
+#     - ../../hakkapeliitta/public/:/usr/share/nginx/html
+
