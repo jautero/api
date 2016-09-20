@@ -18,6 +18,8 @@ import App from './app/components/App'
 import LoginForm from './app/components/LoginForm'
 import MemberList from './kansa/components/MemberList'
 import Nominate from './hugo/components/Nominate'
+import { initHugoAdmin } from './hugo-admin/actions'
+import Canon from './hugo-admin/components/Canon'
 import middleware from './middleware'
 import reducers from './reducers'
 
@@ -42,6 +44,10 @@ const onEnterHugo = (nextState, replace) => {
   if (!person) store.dispatch(tryLogin());
 }
 
+const onEnterHugoAdmin = () => {
+  store.dispatch(initHugoAdmin())
+}
+
 const onEnterNominations = ({ params: { id } }, _, callback) => {
   store.dispatch(setNominator(id, callback));
 }
@@ -57,6 +63,7 @@ ReactDOM.render(
           <Route path="profile" onEnter={authCheck} component={MemberList} />
           <Route path="hugo" onEnter={authCheck} >
             <IndexRedirect to={PATH_IN} />
+            <Route path="admin" onEnter={onEnterHugoAdmin} component={Canon}/>
             <Route path=":id" onEnter={onEnterHugo} >
               <IndexRedirect to="nominate" />
               <Route path="nominate" onEnter={onEnterNominations} component={Nominate} />
