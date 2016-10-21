@@ -34,12 +34,12 @@ describe("Check that API services are up",function () {
             done();
         }
     })
-    it("Should respond with json on api/kansa/", function (done) {
+    it("Should respond with json on /api/kansa/", function (done) {
         defaultagent.get("/api/kansa/")
             .expect("Content-Type",/json/)
         .end(done);
     })
-    it("Should respond with json on api/hugo/", function (done) {
+    it("Should respond with json on /api/hugo/", function (done) {
         defaultagent.get("/api/hugo/")
             .expect("Content-Type",/json/)
         .end(done);
