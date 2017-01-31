@@ -27,15 +27,20 @@ some relevant data and/or a `message` field.
   * [`POST /api/kansa/people/:id`](#post-apikansapeopleid)
   * [`POST /api/kansa/people/:id/upgrade`](#post-apikansapeopleidupgrade)
   * [WebSocket: `wss://server/api/kansa/people/updates`](#websocket-wssserverapikansapeopleupdates)
+* [Purchases](#purchases)
+  * [`POST /api/kansa/purchase`](#post-apikansapurchase)
+  * [`GET /api/kansa/purchase/prices`](#get-apikansapurchaseprices)
 * [Hugo Nominations](#hugo-nominations)
   * [`GET /api/hugo/:id/nominations`](#get-apihugoidnominations)
   * [`POST /api/hugo/:id/nominate`](#post-apihugoidnominate)
-* [Hugo Canonicalisation](#hugo-canonicalisation)
-  * [`GET /api/hugo/canon/canon`](#get-apihugocanoncanon)
-  * [`GET /api/hugo/canon/nominations`](#get-apihugocanonnominations)
-  * [`POST /api/hugo/canon/classify`](#post-apihugocanonclassify)
-  * [`POST /api/hugo/canon/entry/:id`](#post-apihugocanonentryid)
-  * [WebSocket: `wss://server/api/hugo/canon/updates`](#websocket-wssserverapihugocanonupdates)
+* [Hugo Admin](#hugo-admin)
+  * [`GET /api/hugo/admin/ballots`](#get-apihugoadminballots)
+  * [`GET /api/hugo/admin/ballots/:category`](#get-apihugoadminballotscategory)
+  * [`GET /api/hugo/admin/canon`](#get-apihugoadmincanon)
+  * [`POST /api/hugo/admin/canon/:id`](#post-apihugoadmincanonid)
+  * [`POST /api/hugo/admin/classify`](#post-apihugoadminclassify)
+  * [`GET /api/hugo/admin/nominations`](#get-apihugoadminnominations)
+  * [WebSocket: `wss://server/api/hugo/admin/canon-updates`](#websocket-wssserverapihugoadmincanon-updates)
 
 ----
 
@@ -70,7 +75,7 @@ Membership statistics by country
 ### `POST /api/kansa/key`
 - Parameters: `email`
 
-If `email` matches at least one known person:
+If `email` matches at least one known person (case-insensitively):
 1. Generate and store a `key`
 2. Send a message to the given `email` address with a login link
 
@@ -291,6 +296,44 @@ events to signal `'Unauthorized'` and `'Not Found'` (respectively) to the client
 ```
 
 
+## Purchases
+
+### `POST /api/kansa/purchase`
+- Parameters: `amount`, `email`, `token`,
+  `new_members: [ { membership, email, legal_name, public_first_name, public_last_name, city, state, country, paper_pubs }, ... ]`,
+  `upgrades: [ { id, membership, paper_pubs }, ... ]`
+
+Using the `token` received from Stripe, make a charge of `amount` on the card
+(once verified against the server-side calculated sum from the items) and add
+the `new_members` to the database as well as applying the specified `upgrades`.
+For new members, generate a login key and include it in the welcome email sent
+to each address. Send the receipt of the purchase to the `email` address.
+
+#### Response
+```
+{
+  status: 'success',
+  emails: ['address@example.com', ...]
+}
+```
+
+### `GET /api/kansa/purchase/prices`
+
+Current membership and paper publications prices, with `amount` in EUR cents.
+
+#### Response
+```
+{
+  memberships: {
+    Supporter: { amount: 3500, description: 'Supporting' },
+    ...,
+    Adult: { amount: 12000, description: 'Adult' },
+  },
+  PaperPubs: { amount: 1000, description: 'Paper publications' }
+}
+```
+
+
 ## Hugo Nominations
 
 ### `GET /api/hugo/:id/nominations`
@@ -355,13 +398,13 @@ nomination.
 
 ### `POST /api/hugo/:id/nominate`
 - Requires authentication
-- Parameters: `category`, `nominations`
+- Parameters: `signature`, `category`, `nominations`
 
 Find the Hugo nominations for the person matching `id`. If its email address
-does not match the session data, `hugo_admin` authority is required. `category`
-needs to be string matching one of the award categories included
-[here](postgres/init/30-hugo-init.sql). `nominations` must be a JSON array of
-objects.
+does not match the session data, `hugo_admin` authority is required. `signature`
+needs to be a non-empty string. `category` needs to be string matching one of
+the award categories included [here](postgres/init/30-hugo-init.sql).
+`nominations` must be a JSON array of objects.
 
 #### Response
 ```
@@ -371,6 +414,7 @@ objects.
   "client_ip": "::ffff:172.19.0.5",
   "client_ua": "curl/7.43.0",
   "person_id": 1,
+  "signature": "…",
   "category": "Novella",
   "nominations": [
     {
@@ -389,30 +433,84 @@ objects.
 ```
 
 
-## Hugo Canonicalisation
+## Hugo Admin
 
-### `GET /api/hugo/canon/canon`
+### `GET /api/hugo/admin/ballots`
 - Requires authentication and `hugo_admin` authority
 
-Fetch the set of canonical nominations. Results are sorted by category, and
-expressed as `[ id, object ]` tuples.
+Fetch all current uncanonicalised ballots. Results are sorted by category, and
+expressed as `[ id, array ]` tuples where ballots with the same `id` in
+different categories are from the same nominator.
 
 #### Response
 ```
 {
   Fancast: [
-    [ 2, { title: 'The Really Good One' } ],
-    [ 3, { title: 'Three Little Piggies' } ]
+    [ 24, [ { title: 'Three Little Piggies' }, … ] ],
+    [ 42, [ { title: 'The Really Good One' }, { title: '3 pigs' }, … ] ],
+    …
   ],
-  Novel: [
-    [ 6, { author: 'Asimov', title: '1984' } ]
+  Novel: {
+    [ 42, [ { author: 'Asimov', title: '1984' }, … ] ],
+    …
+  },
+  …
+}
+```
+
+
+### `GET /api/hugo/admin/ballots/:category`
+- Requires authentication and `hugo_admin` authority
+
+Fetch the current uncanonicalised ballots for `category`. Results are expressed
+as `[ id, array ]` tuples where ballots with the same `id` in different
+categories are from the same nominator.
+
+#### Response
+```
+[
+  [ 24, [ { title: 'Three Little Piggies' }, … ] ],
+  [ 42, [ { title: 'The Really Good One' }, { title: '3 pigs' }, … ] ],
+  …
+]
+```
+
+
+### `GET /api/hugo/admin/canon`
+- Requires authentication and `hugo_admin` authority
+
+Fetch the set of canonical nominations. Results are sorted by category, and
+expressed as `{ id, data, disqualified, relocated }` objects.
+
+#### Response
+```
+{
+  Fancast: [
+    { id: 2, data: { title: 'The Really Good One' }, disqualified: false },
+    { id: 3, data: { title: 'Three Little Piggies' }, disqualified: true  }
+  ],
+  Novella: [
+    { id: 6, data: { author: 'Asimov', title: '1984' },
+      disqualified: false, relocated: 'Novel' }
   ],
   …
 }
 ```
 
 
-### `GET /api/hugo/canon/nominations`
+### `POST /api/hugo/admin/canon/:id`
+- Requires authentication and `hugo_admin` authority
+- Parameters: `category` (required), `nomination` (required), `disqualified`, `relocated`
+
+Sets all the fields for the canonical nomination `id`.
+
+#### Response
+```
+{ status: 'success' }
+```
+
+
+### `GET /api/hugo/admin/nominations`
 - Requires authentication and `hugo_admin` authority
 
 Fetch all unique nomination entries. Results are sorted by category, and
@@ -436,7 +534,7 @@ nomination's canonical form, if such has been assigned.
 ```
 
 
-### `POST /api/hugo/canon/classify`
+### `POST /api/hugo/admin/classify`
 - Requires authentication and `hugo_admin` authority
 - Parameters: `category` (required), `nominations` (required), `canon_id`, `canon_nom`
 
@@ -462,19 +560,7 @@ canonicalisations are removed.
 ```
 
 
-### `POST /api/hugo/canon/entry/:id`
-- Requires authentication and `hugo_admin` authority
-- Parameters: `category` (required), `nomination` (required)
-
-Sets the `category` and `nomination` for the canonical nomination `id`.
-
-#### Response
-```
-{ status: 'success' }
-```
-
-
-### WebSocket: `wss://server/api/hugo/canon/updates`
+### WebSocket: `wss://server/api/hugo/admin/canon-updates`
 - Requires authentication and `hugo_admin` authority
 
 WebSocket connection endpoint. The server won't listen to any messages sent to
@@ -486,7 +572,7 @@ events to signal `'Unauthorized'` and `'Not Found'` (respectively) to the client
 
 #### Response
 ```
-'{"canon":{"id":13,"category":"Novel","nomination":{"author":"That Guy","title":"That Book"}}}'
+'{"canon":{"id":13,"category":"Novel","nomination":{"author":"That Guy","title":"That Book"},"disqualified":false}}'
 '{"classification":{"nomination":{"author": "A friend"},"category":"Novel","canon_id":13}}'
 …
 ```

@@ -1,8 +1,8 @@
 const AuthError = require('./errors').AuthError;
 const InputError = require('./errors').InputError;
 
-class Canon {
-  static verifyCanonAccess(req, res, next) {
+class Admin {
+  static verifyAdminAccess(req, res, next) {
     const user = req.session.user;
     if (user.hugo_admin) {
       next();
@@ -14,16 +14,59 @@ class Canon {
   constructor(pgp, db) {
     this.pgp = pgp;
     this.db = db;
+    this.getAllBallots = this.getAllBallots.bind(this);
+    this.getBallots = this.getBallots.bind(this);
     this.getCanon = this.getCanon.bind(this);
     this.getNominations = this.getNominations.bind(this);
     this.classify = this.classify.bind(this);
     this.updateCanonEntry = this.updateCanonEntry.bind(this);
   }
 
+  getAllBallots(req, res, next) {
+    this.db.any(`
+        SELECT DISTINCT ON (category, person_id)
+               category, person_id, nominations
+          FROM Nominations
+      ORDER BY category, person_id, time DESC
+    `)
+      .then(data => res.status(200).json(
+        data.reduce((ballots, { category, nominations, person_id }) => {
+          const entry = [ person_id, nominations ];
+          if (ballots[category]) {
+            ballots[category].push(entry);
+          } else {
+            ballots[category] = [entry];
+          }
+          return ballots;
+        }, {})
+      ))
+      .catch(next);
+  }
+
+  getBallots(req, res, next) {
+    const category = req.params.category;
+    if (!category) return next(new InputError('category is required'));
+    this.db.any(`
+        SELECT DISTINCT ON (person_id)
+               person_id, nominations
+          FROM Nominations
+         WHERE category = $1
+      ORDER BY person_id, time DESC
+    `, category)
+      .then(data => res.status(200).json(
+        data.map(({ nominations, person_id }) => [ person_id, nominations ])
+      ))
+      .catch(next);
+  }
+
   getCanon(req, res, next) {
-    this.db.any(`SELECT id, category, nomination FROM Canon`)
-      .then(data => res.status(200).json(data.reduce((canon, { id, category, nomination }) => {
-        const entry = [ id, nomination ];
+    this.db.any(`
+      SELECT id, category, nomination, disqualified, relocated
+        FROM Canon`
+    )
+      .then(data => res.status(200).json(data.reduce((canon, entry) => {
+        const category = entry.category;
+        delete entry.category;
         if (canon.hasOwnProperty(category)) {
           canon[category].push(entry);
         } else {
@@ -109,20 +152,25 @@ class Canon {
     const data = {
       id: parseInt(req.params.id),
       category: req.body.category,
-      nomination: req.body.nomination
+      nomination: req.body.nomination,
+      disqualified: req.body.disqualified || false,
+      relocated: req.body.relocated || null
     };
     if (!data.category || !data.nomination) {
       return next(new InputError('Required fields: category, nomination'));
     }
     this.db.one(`
-      UPDATE Canon
-      SET category = $(category), nomination = $(nomination)::jsonb
-      WHERE id = $(id)
-      RETURNING id
-    `, data)
+         UPDATE Canon
+            SET category = $(category),
+                nomination = $(nomination)::jsonb,
+                disqualified = $(disqualified),
+                relocated = $(relocated)
+          WHERE id = $(id)
+      RETURNING id`, data
+    )
       .then(() => res.status(200).json({ status: 'success' }))
       .catch(next);
   }
 }
 
-module.exports = Canon;
+module.exports = Admin;

@@ -15,11 +15,6 @@ services:
       - "443:443"
     restart: always
 
-  client-build:
-    environment:
-      API_HOST:
-      TITLE:
-
   hugo:
     environment:
       DATABASE_URL:
@@ -30,6 +25,7 @@ services:
     environment:
       DATABASE_URL:
       SESSION_SECRET:
+      STRIPE_SECRET_APIKEY:
     restart: always
 
   kyyhky:

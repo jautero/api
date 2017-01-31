@@ -1,4 +1,5 @@
 const cors = require('cors');
+const csv = require('csv-express');
 const express = require('express');
 const http = require('http');
 const logger = require('morgan');
@@ -9,12 +10,15 @@ const pgSession = require('connect-pg-simple')(session);
 const pgOptions = { promiseLib: require('bluebird') };
 const pgp = require('pg-promise')(pgOptions);
 require('pg-monitor').attach(pgOptions);
+const db = pgp(process.env.DATABASE_URL);
 
 const admin = require('./lib/admin');
 const key = require('./lib/key');
 const log = require('./lib/log');
 const people = require('./lib/people');
 const PeopleStream = require('./lib/PeopleStream');
+const Purchase = require('./lib/purchase');
+const purchase = new Purchase(pgp, db);
 const upgrade = require('./lib/upgrade');
 const user = require('./lib/user');
 
@@ -22,7 +26,6 @@ const app = express();
 const server = http.createServer(app);
 const expressWs = require('express-ws')(app, server);
 const router = express.Router();
-const db = pgp(process.env.DATABASE_URL);
 const peopleStream = new PeopleStream(db);
 
 // these are accessible without authentication
@@ -36,18 +39,24 @@ router.get('/favicon.ico', (req, res, next) => {
   res.sendFile('static/favicon.ico', { root: __dirname }, err => err && next(err));
 });
 
+router.post('/purchase', purchase.makePurchase);
+router.get('/purchase/prices', purchase.getPrices);
+
 // subsequent routes require authentication
 router.use(user.authenticate);
 router.all('/logout', user.logout);
 
+router.get('/members/emails', people.getMemberEmails);
+router.get('/members/paperpubs', people.getMemberPaperPubs);
+
 router.get('/people', people.getPeople);
-router.post('/people', people.addPerson);
+router.post('/people', people.authAddPerson);
 
 router.all('/people/:id*', user.verifyPeopleAccess);
 router.get('/people/:id', people.getPerson);
 router.post('/people/:id', people.updatePerson);
 router.get('/people/:id/log', log.getPersonLog);
-router.post('/people/:id/upgrade', upgrade.upgradePerson);
+router.post('/people/:id/upgrade', upgrade.authUpgradePerson);
 
 router.get('/user', user.getInfo);
 router.get('/user/log', log.getUserLog);
@@ -55,6 +64,7 @@ router.get('/user/log', log.getUserLog);
 router.all('/admin*', admin.isAdminAdmin);
 router.get('/admin', admin.getAdmins);
 router.post('/admin', admin.setAdmin);
+router.post('/admin/set-keys', key.setAllKeys);
 
 app.locals.db = db;
 app.use(logger('dev'));

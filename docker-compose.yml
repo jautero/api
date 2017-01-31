@@ -3,7 +3,6 @@ version: '2'
 # For full config, see also docker-compose.{override,prod}.yml
 
 volumes:
-  client:
   pgdata:
 
 services:
@@ -14,15 +13,9 @@ services:
       - kansa
     volumes:
       - ./nginx/conf.template:/nginx.conf.template:ro
-      - client:/usr/share/nginx/html/client:ro
+      - ./nginx/admin.html:/usr/share/nginx/html/client/admin.html:ro
+      - ./nginx/index.html:/usr/share/nginx/html/client/index.html:ro
     command: /bin/bash -c "envsubst '$$API_SERVER_NAME $$API_SSL_CERTIFICATE $$API_SSL_CERTIFICATE_KEY' < /nginx.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
-
-  client-build:
-    build: ./client
-    environment:
-      NODE_ENV: production
-    volumes:
-      - client:/usr/src/app/dist
 
   hugo:
     build: ./hugo/server
@@ -58,14 +51,13 @@ services:
       - "6379"
 
   postgres:
-    image: postgres:9.5
+    build: ./postgres
     environment:
       PGDATA: /pgdata
+      PGUSER: admin
       POSTGRES_DB: api
       POSTGRES_USER: admin
     expose:
       - "5432"
     volumes:
       - pgdata:/pgdata
-      - ./postgres/damm:/damm:ro
-      - ./postgres/init:/docker-entrypoint-initdb.d:ro
